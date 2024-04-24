@@ -1,9 +1,9 @@
 package com.turbotech.bioauth
 
-import android.content.Context
-import android.hardware.fingerprint.FingerprintManager
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.compose.setContent
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Arrangement
@@ -31,7 +31,7 @@ import androidx.fragment.app.FragmentActivity
 import com.turbotech.bioauth.ui.theme.BioAuthTheme
 
 class MainActivity : FragmentActivity() {
-    @RequiresApi(Build.VERSION_CODES.P)
+    @RequiresApi(Build.VERSION_CODES.R)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -48,7 +48,7 @@ class MainActivity : FragmentActivity() {
     }
 }
 
-@RequiresApi(Build.VERSION_CODES.P)
+@RequiresApi(Build.VERSION_CODES.R)
 @Composable
 fun BioMetricDemo() {
     val context = LocalContext.current
@@ -64,26 +64,33 @@ fun BioMetricDemo() {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Button(onClick = {
-            bioMetric.biometricPrompt(
-                title = title.value,
-                subtitle = subTitle.value,
-                negativeButtonText = negativeButtonText.value,
-                fragmentActivity = bioMetricPopUp,
-                onSuccess = {
-                    displayStatusText.value = "BioMetric Success"
-                },
-                onFailed = {
-                    displayStatusText.value = "Verification Failed"
-                },
-                onError = { _: Int, errorMessage ->
-                    displayStatusText.value = errorMessage
-                }
-            )
-        }) {
-            Icon(Icons.Default.Lock, contentDescription = "BioMetric")
+        // Initially redirect for setting fingerprint on the device
+        if (bioMetric.isBioMetricAvailable() == BioAuthAvailabilityStatus.AVAILABLE_BUT_NOT_SET) {
+            val intent = Intent(Settings.ACTION_BIOMETRIC_ENROLL)
+            context.startActivity(intent)
+        }else{
+            Button(onClick = {
+                bioMetric.biometricPrompt(
+                    title = title.value,
+                    subtitle = subTitle.value,
+                    negativeButtonText = negativeButtonText.value,
+                    fragmentActivity = bioMetricPopUp,
+                    onSuccess = {
+                        displayStatusText.value =
+                            "BioMetric Success: ${BioAuthAvailabilityStatus.READY.statusCode}"
+                    },
+                    onFailed = {
+                        displayStatusText.value = "Verification Failed"
+                    },
+                    onError = { _: Int, errorMessage ->
+                        displayStatusText.value = errorMessage
+                    }
+                )
+            }) {
+                Icon(Icons.Default.Lock, contentDescription = "BioMetric")
+            }
+            Spacer(modifier = Modifier.height(30.dp))
+            Text(text = displayStatusText.value, fontSize = 24.sp, textAlign = TextAlign.Center)
         }
-        Spacer(modifier = Modifier.height(30.dp))
-        Text(text = displayStatusText.value, fontSize = 24.sp, textAlign = TextAlign.Center)
     }
 }

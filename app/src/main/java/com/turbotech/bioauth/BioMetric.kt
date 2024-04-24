@@ -4,7 +4,6 @@ import android.content.Context
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.biometric.BiometricManager
-import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
 import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_WEAK
 import androidx.fragment.app.FragmentActivity
 
@@ -14,9 +13,9 @@ class BioMetric(appContext: Context) {
     private val bioMetricManager = BiometricManager.from(appContext.applicationContext)
     private lateinit var biometricsPrompt: androidx.biometric.BiometricPrompt
 
-    private fun isBioMetricAvailable(): BioAuthAvailabilityStatus {
+    fun isBioMetricAvailable(): BioAuthAvailabilityStatus {
 //        BIOMETRIC_WEAK or BIOMETRIC_STRONG OR DEVICE_CREDENTIAL
-        return when (bioMetricManager.canAuthenticate(BIOMETRIC_STRONG or BIOMETRIC_WEAK)) {
+        return when (bioMetricManager.canAuthenticate(BIOMETRIC_WEAK)) {
             BiometricManager.BIOMETRIC_SUCCESS -> BioAuthAvailabilityStatus.READY
             BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE -> BioAuthAvailabilityStatus.TEMPORARILY_NOT_AVAILABLE
             BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE -> BioAuthAvailabilityStatus.NOT_AVAILABLE
@@ -25,7 +24,7 @@ class BioMetric(appContext: Context) {
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.P)
+    @RequiresApi(Build.VERSION_CODES.R)
     fun biometricPrompt(
         title: String,
         subtitle: String,
@@ -35,6 +34,7 @@ class BioMetric(appContext: Context) {
         onFailed: () -> Unit,
         onError: (errorCode: Int, errorMessage: String) -> Unit
     ) {
+
         when (isBioMetricAvailable()) {
             BioAuthAvailabilityStatus.NOT_AVAILABLE -> {
                 onError(
