@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.annotation.RequiresApi
 import androidx.biometric.BiometricManager
@@ -68,31 +69,26 @@ fun BioMetricDemo() {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-
-
         if (bioMetric.isBioMetricAvailable() == BioAuthAvailabilityStatus.READY) {
             // Fingerprint ki mundu device lo pin undali
-            if (bioMetric.bioMetricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_WEAK) == BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED) {
+            if (bioMetric.bioMetricManager.canAuthenticate(
+                    BiometricManager.Authenticators.BIOMETRIC_WEAK or
+                            BiometricManager.Authenticators.DEVICE_CREDENTIAL
+                ) ==
+                BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED
+            ) {
                 val intent = Intent(Settings.ACTION_BIOMETRIC_ENROLL)
                 context.startActivity(intent)
+                Toast.makeText(context, "1", Toast.LENGTH_SHORT).show()
             }
             buttonStatus.value = true
         } else {
-
-            when (bioMetric.bioMetricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_WEAK or BiometricManager.Authenticators.DEVICE_CREDENTIAL)) {
-                BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE -> {
-                    val intent = Intent(Settings.ACTION_SECURITY_SETTINGS)
-                    context.startActivity(intent)
-                    buttonStatus.value = true
-                }
-
-                else -> {
-                    val intent = Intent(Settings.ACTION_BIOMETRIC_ENROLL)
-                    context.startActivity(intent)
-                    buttonStatus.value = true
-                }
-            }
+            val intent = Intent(Settings.ACTION_SECURITY_SETTINGS)
+            context.startActivity(intent)
+            buttonStatus.value = true
+            Toast.makeText(context, "3", Toast.LENGTH_SHORT).show()
         }
+
         if (buttonStatus.value) {
             Button(onClick = {
                 bioMetric.biometricPrompt(
