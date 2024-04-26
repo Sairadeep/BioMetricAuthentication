@@ -4,18 +4,20 @@ import android.content.Context
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
 import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_WEAK
+import androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
 import androidx.fragment.app.FragmentActivity
 
 class BioMetric(appContext: Context) {
 
     private lateinit var promptInfo: androidx.biometric.BiometricPrompt.PromptInfo
-    private val bioMetricManager = BiometricManager.from(appContext.applicationContext)
+     val bioMetricManager = BiometricManager.from(appContext.applicationContext)
     private lateinit var biometricsPrompt: androidx.biometric.BiometricPrompt
 
-    fun isBioMetricAvailable(): BioAuthAvailabilityStatus {
+      fun isBioMetricAvailable(): BioAuthAvailabilityStatus {
 //        BIOMETRIC_WEAK or BIOMETRIC_STRONG OR DEVICE_CREDENTIAL
-        return when (bioMetricManager.canAuthenticate(BIOMETRIC_WEAK)) {
+        return when (bioMetricManager.canAuthenticate(BIOMETRIC_WEAK or DEVICE_CREDENTIAL)) {
             BiometricManager.BIOMETRIC_SUCCESS -> BioAuthAvailabilityStatus.READY
             BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE -> BioAuthAvailabilityStatus.TEMPORARILY_NOT_AVAILABLE
             BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE -> BioAuthAvailabilityStatus.NOT_AVAILABLE
@@ -34,12 +36,11 @@ class BioMetric(appContext: Context) {
         onFailed: () -> Unit,
         onError: (errorCode: Int, errorMessage: String) -> Unit
     ) {
-
         when (isBioMetricAvailable()) {
             BioAuthAvailabilityStatus.NOT_AVAILABLE -> {
                 onError(
                     BioAuthAvailabilityStatus.NOT_AVAILABLE.statusCode,
-                    "BioMetric not available for the device"
+                    "Pin or Fingerprint or Face not available for the device"
                 )
                 return
             }
@@ -47,7 +48,7 @@ class BioMetric(appContext: Context) {
             BioAuthAvailabilityStatus.TEMPORARILY_NOT_AVAILABLE -> {
                 onError(
                     BioAuthAvailabilityStatus.TEMPORARILY_NOT_AVAILABLE.statusCode,
-                    "BioMetric not available at this moment"
+                    "Not available at this moment"
                 )
                 return
             }
@@ -55,7 +56,7 @@ class BioMetric(appContext: Context) {
             BioAuthAvailabilityStatus.AVAILABLE_BUT_NOT_SET -> {
                 onError(
                     BioAuthAvailabilityStatus.AVAILABLE_BUT_NOT_SET.statusCode,
-                    "Set an biometric on the device"
+                    "Please set a security on the device"
                 )
                 return
             }
@@ -85,12 +86,24 @@ class BioMetric(appContext: Context) {
             }
         )
 
-        promptInfo =
-            androidx.biometric.BiometricPrompt.PromptInfo.Builder()
-                .setTitle(title)
-                .setSubtitle(subtitle)
-                .setNegativeButtonText(negativeButtonText)
-                .build()
+        promptInfo = when (bioMetricManager.canAuthenticate(BIOMETRIC_STRONG or BIOMETRIC_WEAK)) {
+            BiometricManager.BIOMETRIC_SUCCESS -> {
+                androidx.biometric.BiometricPrompt.PromptInfo.Builder()
+                    .setTitle(title)
+                    .setSubtitle(subtitle)
+                    .setAllowedAuthenticators(BIOMETRIC_WEAK or BIOMETRIC_STRONG)
+                    .setNegativeButtonText(negativeButtonText)
+                    .build()
+            }
+
+            else -> {
+                androidx.biometric.BiometricPrompt.PromptInfo.Builder()
+                    .setTitle(title)
+                    .setSubtitle(subtitle)
+                    .setAllowedAuthenticators(DEVICE_CREDENTIAL)
+                    .build()
+            }
+        }
 
         biometricsPrompt.authenticate(promptInfo)
     }

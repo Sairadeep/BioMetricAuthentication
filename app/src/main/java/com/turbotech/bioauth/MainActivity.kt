@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.compose.setContent
 import androidx.annotation.RequiresApi
+import androidx.biometric.BiometricManager
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -53,22 +54,46 @@ class MainActivity : FragmentActivity() {
 fun BioMetricDemo() {
     val context = LocalContext.current
     val bioMetric = BioMetric(context)
-    val title = remember { mutableStateOf("Unlock with Biometric") }
-    val subTitle = remember { mutableStateOf("BioMetric") }
+    val title = remember { mutableStateOf("Unlock by providing the screen lock value") }
+    val subTitle = remember { mutableStateOf("Authentication") }
     val negativeButtonText = remember { mutableStateOf("CANCEL") }
     val bioMetricPopUp = context as FragmentActivity
     val displayStatusText = remember { mutableStateOf("") }
+    val buttonStatus = remember {
+        mutableStateOf(false)
+    }
 
     Column(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Initially redirect for setting fingerprint on the device
-        if (bioMetric.isBioMetricAvailable() == BioAuthAvailabilityStatus.AVAILABLE_BUT_NOT_SET) {
-            val intent = Intent(Settings.ACTION_BIOMETRIC_ENROLL)
-            context.startActivity(intent)
-        }else{
+
+
+        if (bioMetric.isBioMetricAvailable() == BioAuthAvailabilityStatus.READY) {
+            // Fingerprint ki mundu device lo pin undali
+            if (bioMetric.bioMetricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_WEAK) == BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED) {
+                val intent = Intent(Settings.ACTION_BIOMETRIC_ENROLL)
+                context.startActivity(intent)
+            }
+            buttonStatus.value = true
+        } else {
+
+            when (bioMetric.bioMetricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_WEAK or BiometricManager.Authenticators.DEVICE_CREDENTIAL)) {
+                BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE -> {
+                    val intent = Intent(Settings.ACTION_SECURITY_SETTINGS)
+                    context.startActivity(intent)
+                    buttonStatus.value = true
+                }
+
+                else -> {
+                    val intent = Intent(Settings.ACTION_BIOMETRIC_ENROLL)
+                    context.startActivity(intent)
+                    buttonStatus.value = true
+                }
+            }
+        }
+        if (buttonStatus.value) {
             Button(onClick = {
                 bioMetric.biometricPrompt(
                     title = title.value,
@@ -77,7 +102,7 @@ fun BioMetricDemo() {
                     fragmentActivity = bioMetricPopUp,
                     onSuccess = {
                         displayStatusText.value =
-                            "BioMetric Success: ${BioAuthAvailabilityStatus.READY.statusCode}"
+                            "Success"
                     },
                     onFailed = {
                         displayStatusText.value = "Verification Failed"
